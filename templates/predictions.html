@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hello">
+    <div>
+      <h2>Predictions</h2>
+      <p>Live forecasts from scikit-learn models trained on your MongoDB transaction history.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="retrainBtn">
+        <i data-lucide="refresh-cw"></i>
+        Retrain
+      </button>
+    </div>
+  </section>
+
+  <section class="callout is-info" id="trainStatus" hidden>
+    <i data-lucide="info"></i>
+    <div id="trainStatusText"></div>
+  </section>
+
+  <!-- Headline KPIs -->
+  <section class="grid grid-kpi-3">
+    <div class="metric-tile pink">
+      <span class="label">Forecast (from history)</span>
+      <div class="val" id="nextMonthVal">—</div>
+      <div class="sub" id="nextMonthSub">—</div>
+    </div>
+    <div class="metric-tile blue">
+      <span class="label">Projection (from this month so far)</span>
+      <div class="val" id="paceVal">—</div>
+      <div class="sub" id="paceSub">—</div>
+    </div>
+    <div class="metric-tile yellow">
+      <span class="label">Model confidence</span>
+      <div class="val" id="confVal">—</div>
+      <div class="sub" id="confSub">—</div>
+    </div>
+  </section>
+
+  <!-- Forecast chart + Historical trend -->
+  <section class="grid grid-split">
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Spending forecast</h3>
+          <p class="card-sub" id="forecastSub">LinearRegression fit over your historical monthly totals.</p>
+        </div>
+        <div class="chip" id="chosenModelChip">—</div>
+      </div>
+      <div class="chart-wrap"><canvas id="forecastChart"></canvas></div>
+      <div class="legend-note" id="intervalNote"></div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Model consensus</h3>
+          <p class="card-sub" id="consensusSub">What every model independently predicts for next month.</p>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="consensusChart"></canvas></div>
+      <div class="legend-note" id="consensusNote"></div>
+    </article>
+  </section>
+
+  <!-- Suggested budget — forecast → planning cap -->
+  <article class="card" id="budgetRecommendCard">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Suggested budget for <span id="recMonthLabel">next month</span></h3>
+        <p class="card-sub" id="recSub">Translates the forecast into a monthly cap. Pick a buffer level that matches your risk tolerance.</p>
+      </div>
+    </div>
+    <div class="budget-rec-grid" id="budgetRecGrid">
+      <div class="muted-note">Loading…</div>
+    </div>
+    <div class="legend-note" id="recDisclaimer" hidden></div>
+  </article>
+
+  <!-- Walkthrough: how your forecast was computed -->
+  <article class="card walkthrough-card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">How your next-month forecast was computed</h3>
+        <p class="card-sub">Six steps, with the actual numbers from your data.</p>
+      </div>
+    </div>
+    <ol class="walkthrough" id="forecastWalkthrough">
+      <li class="muted-note">Loading…</li>
+    </ol>
+  </article>
+
+  <!-- Model comparison -->
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Model comparison</h3>
+        <p class="card-sub">Every forecasting method, scored by walk-forward validation on months the model never trained on. Lower MAE wins.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" aria-label="Model comparison">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>How it predicts</th>
+            <th style="text-align:right">Next month</th>
+            <th style="text-align:right">Holdout MAE</th>
+            <th style="text-align:right">Folds</th>
+          </tr>
+        </thead>
+        <tbody id="modelCompareBody"></tbody>
+      </table>
+    </div>
+  </article>
+
+  <!-- Budget status — combined overrun risk + trajectory -->
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Budget status — <span id="riskMonthLabel">this month</span></h3>
+        <p class="card-sub">For each budget: where you are today, where you're heading, when you'll hit the cap, and the probability of overrun.</p>
+      </div>
+      <div class="chip" id="riskDayChip">—</div>
+    </div>
+    <div id="budgetStatusList" class="risk-list">
+      <div class="muted-note">Loading…</div>
+    </div>
+  </article>
+
+
+
+  <!-- Model evaluation -->
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Model evaluation</h3>
+        <p class="card-sub">Honest metrics — forecast errors come from walk-forward holdouts, not from in-sample fit.</p>
+      </div>
+      <div class="chip" id="modelDataChip">—</div>
+    </div>
+    <div class="grid grid-three">
+      <div class="metric-tile">
+        <span class="label">MAE</span>
+        <div class="val" id="metricMae">—</div>
+        <div class="sub">Mean absolute error (regression)</div>
+      </div>
+      <div class="metric-tile">
+        <span class="label">RMSE</span>
+        <div class="val" id="metricRmse">—</div>
+        <div class="sub">Root mean squared error</div>
+      </div>
+      <div class="metric-tile">
+        <span class="label">R²</span>
+        <div class="val" id="metricR2">—</div>
+        <div class="sub">Variance explained</div>
+      </div>
+      <div class="metric-tile">
+        <span class="label">Rows trained on</span>
+        <div class="val" id="metricRows">—</div>
+        <div class="sub" id="metricRowsSub">Transactions in your DB</div>
+      </div>
+    </div>
+  </article>
+
+  <!-- Methods explainer -->
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">How these predictions are made</h3>
+        <p class="card-sub">Plain-language method notes for each panel above.</p>
+      </div>
+    </div>
+    <ul class="simple-list">
+      <li>
+        <div class="lead">
+          <span class="ic"><i data-lucide="trending-up"></i></span>
+          <div>
+            <div><strong>Next-month forecast</strong></div>
+            <div class="meta">
+              sklearn <code>LinearRegression</code> fitted to <em>(month index, monthly total)</em>.
+              Predicts the next calendar month. MAE / RMSE / R² are measured on the fit.
+            </div>
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="lead">
+          <span class="ic"><i data-lucide="calendar-clock"></i></span>
+          <div>
+            <div><strong>This-month projection</strong></div>
+            <div class="meta">
+              Linear pacing: <code>spent_so_far × days_in_month / days_elapsed</code>.
+            </div>
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="lead">
+          <span class="ic"><i data-lucide="alert-triangle"></i></span>
+          <div>
+            <div><strong>Budget-overrun risk</strong></div>
+            <div class="meta">
+              Projection = 60% pacing + 40% historical mean. Probability from
+              <code>sigmoid((projection − budget) / σ_history)</code>.
+            </div>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </article>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/predictions.js') }}" defer></script>
+{% endblock %}

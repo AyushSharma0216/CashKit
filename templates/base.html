@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpendSense · {{ page_title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+  {% block head_extra %}{% endblock %}
+</head>
+<body data-page="{{ page_id }}">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <button
+    class="mobile-nav-toggle"
+    id="mobileNavToggle"
+    aria-label="Open navigation menu"
+    aria-expanded="false"
+    aria-controls="sidebar"
+  >
+    <i data-lucide="menu"></i>
+  </button>
+
+  <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+    <div class="sidebar-brand">
+      <div class="logo-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="28" height="28" rx="9" />
+          <path d="M10 20c0 2.2 2.2 4 5 4s5-1.8 5-4-2-3.2-5-4-5-1.8-5-4 2.2-4 5-4 5 1.8 5 4" stroke-width="2.2" stroke-linecap="round" />
+          <path d="M15 7v18" stroke-width="2.2" stroke-linecap="round" />
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">spendsense</div>
+        <div class="brand-tagline">Spend with intention.</div>
+      </div>
+    </div>
+
+    <div class="nav-section-label">General</div>
+    <nav class="sidebar-nav" aria-label="Pages">
+      <a href="{{ url_for('overview') }}" class="nav-item {% if page_id == 'overview' %}is-active{% endif %}">
+        <i data-lucide="layout-dashboard"></i><span>Overview</span>
+      </a>
+      <a href="{{ url_for('transactions') }}" class="nav-item {% if page_id == 'transactions' %}is-active{% endif %}">
+        <i data-lucide="receipt"></i><span>Transactions</span>
+      </a>
+      <a href="{{ url_for('budgets') }}" class="nav-item {% if page_id == 'budgets' %}is-active{% endif %}">
+        <i data-lucide="wallet"></i><span>Budgets</span>
+      </a>
+      <a href="{{ url_for('predictions') }}" class="nav-item {% if page_id == 'predictions' %}is-active{% endif %}">
+        <i data-lucide="sparkles"></i><span>Predictions</span>
+      </a>
+      <a href="{{ url_for('reports') }}" class="nav-item {% if page_id == 'reports' %}is-active{% endif %}">
+        <i data-lucide="file-bar-chart"></i><span>Reports</span>
+      </a>
+    </nav>
+
+    <div class="nav-section-label">Tools</div>
+    <nav class="sidebar-nav" aria-label="Tools">
+      <a href="{{ url_for('reports') }}#exportCsvBtn" class="nav-item">
+        <i data-lucide="download"></i><span>Export CSV</span>
+      </a>
+      <a href="{{ url_for('transactions') }}?add=1" class="nav-item">
+        <i data-lucide="plus-circle"></i><span>Quick add</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-snapshot" id="sidebarSnapshot">
+        <div class="snap-label">
+          <i data-lucide="calendar-days"></i>
+          <span id="snapMonthLabel">This month</span>
+        </div>
+        <div class="snap-amount" id="snapAmount">—</div>
+        <div class="snap-progress">
+          <div class="snap-progress-fill" id="snapProgressFill" style="width:0%"></div>
+        </div>
+        <div class="snap-meta" id="snapMeta">Loading…</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="scrim" id="navScrim" aria-hidden="true"></div>
+
+  <main class="main" id="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title">{{ page_title }}</h1>
+        {% block topbar_search %}
+          <label class="search-pill" aria-label="Search">
+            <i data-lucide="search"></i>
+            <input type="search" placeholder="Search transactions, categories…" id="globalSearch" />
+            <span class="divider-v" aria-hidden="true"></span>
+            <span class="filter-chips">
+              <span class="in-label">in</span>
+              <button type="button" class="filter-chip is-blue" data-chip="transactions">Transactions</button>
+              <button type="button" class="filter-chip is-yellow" data-chip="budgets">Budgets</button>
+              <button type="button" class="filter-chip is-pink" data-chip="predictions">Predictions</button>
+              <button type="button" class="filter-chip is-green" data-chip="reports">Reports</button>
+            </span>
+          </label>
+        {% endblock %}
+      </div>
+      <div class="topbar-right">
+        {% block topbar_right %}
+          <button class="icon-btn" aria-label="Notifications" id="notifBtn">
+            <i data-lucide="bell"></i>
+          </button>
+          <div class="profile-chip">
+            <div class="avatar" aria-hidden="true">AS</div>
+            <div class="profile-meta">
+              <div class="profile-name">Student</div>
+              <div class="profile-sub">SpendSense</div>
+            </div>
+          </div>
+        {% endblock %}
+      </div>
+    </header>
+
+    <section class="page-body">
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="modal-root" id="confirmModal" hidden>
+    <div class="modal-backdrop" data-close-confirm></div>
+    <div class="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 class="modal-title" id="confirmTitle">Are you sure?</h2>
+      <p class="modal-body" id="confirmBody">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close-confirm>Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmOk">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

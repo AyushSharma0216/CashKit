@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hello">
+    <div>
+      <h2>Budgets</h2>
+      <p>Set a monthly total, then split it into category sub-budgets.</p>
+    </div>
+    <div class="btn-row" id="budgetHeaderActions"></div>
+  </section>
+
+  <!-- Step 1: Set the total monthly budget (shown when none exists) -->
+  <article class="card budget-setup" id="budgetSetupCard" hidden>
+    <div class="budget-setup-inner">
+      <div class="budget-setup-icon">
+        <i data-lucide="target"></i>
+      </div>
+      <div class="budget-setup-body">
+        <h3 class="card-title">Step 1 — Set your total monthly budget</h3>
+        <p class="card-sub">
+          This is the overall cap for your month. Once set, you can split it into
+          sub-budgets per category (Food, Transport, etc.) and see where every rupee is heading.
+        </p>
+        <form id="setupTotalForm" class="budget-setup-form">
+          <div class="form-field">
+            <label for="setupTotalAmount">Total monthly budget (₹)</label>
+            <input id="setupTotalAmount" type="number" min="1" step="1" required
+                   placeholder="e.g. 20000" autocomplete="off" />
+          </div>
+          <button type="submit" class="btn">
+            <i data-lucide="arrow-right"></i>
+            Save total
+          </button>
+        </form>
+      </div>
+    </div>
+  </article>
+
+  <!-- Hero: donut + headline KPIs (shown once total is set) -->
+  <article class="card budget-hero" id="budgetHeroCard" hidden>
+    <div class="budget-hero-chart">
+      <canvas id="budgetDonut"></canvas>
+      <div class="budget-hero-center" id="budgetHeroCenter">
+        <div class="budget-hero-num" id="budgetHeroPct">—</div>
+        <div class="budget-hero-sub">of plan used</div>
+      </div>
+    </div>
+    <div class="budget-hero-stats">
+      <div class="budget-stat pink">
+        <span class="budget-stat-label">Monthly plan</span>
+        <div class="budget-stat-val" id="budgetTotal">—</div>
+        <div class="budget-stat-sub">Sum of category caps</div>
+      </div>
+      <div class="budget-stat blue">
+        <span class="budget-stat-label">Spent so far</span>
+        <div class="budget-stat-val" id="budgetSpent">—</div>
+        <div class="budget-stat-sub" id="budgetSpentSub">—</div>
+      </div>
+      <div class="budget-stat yellow">
+        <span class="budget-stat-label">Remaining</span>
+        <div class="budget-stat-val" id="budgetRemaining">—</div>
+        <div class="budget-stat-sub" id="budgetRemainingSub">—</div>
+      </div>
+      <div class="budget-stat mint">
+        <span class="budget-stat-label">Days left in month</span>
+        <div class="budget-stat-val" id="budgetDaysLeft">—</div>
+        <div class="budget-stat-sub" id="budgetDaysSub">—</div>
+      </div>
+    </div>
+  </article>
+
+  <!-- Allocation note (how much of total is covered by sub-budgets) -->
+  <article class="card budget-alloc" id="budgetAllocCard" hidden>
+    <div class="budget-alloc-head">
+      <div>
+        <h3 class="card-title">Sub-budget allocation</h3>
+        <p class="card-sub" id="budgetAllocNote">—</p>
+      </div>
+      <div class="chip" id="budgetAllocChip">—</div>
+    </div>
+    <div class="progress" aria-hidden="true">
+      <div class="progress-bar" id="allocBar" style="width:0%"></div>
+    </div>
+  </article>
+
+  <!-- Status counts -->
+  <section class="status-row" id="statusRow" hidden>
+    <div class="status-pill status-safe">
+      <i data-lucide="check-circle-2"></i>
+      <span><strong id="countOnTrack">0</strong> on track</span>
+    </div>
+    <div class="status-pill status-watch">
+      <i data-lucide="activity"></i>
+      <span><strong id="countWatch">0</strong> watch</span>
+    </div>
+    <div class="status-pill status-danger">
+      <i data-lucide="alert-triangle"></i>
+      <span><strong id="countOver">0</strong> over budget</span>
+    </div>
+    <div class="status-pill status-neutral">
+      <i data-lucide="layers"></i>
+      <span><strong id="countTotal">0</strong> active</span>
+    </div>
+  </section>
+
+  <!-- Category sub-budgets grid -->
+  <article class="card" id="subBudgetsCard" hidden>
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Step 2 — Category sub-budgets</h3>
+        <p class="card-sub">Click any card to edit, use the trash icon to remove, or add a new one.</p>
+      </div>
+      <button class="btn btn-sm" id="openAddBudget">
+        <i data-lucide="plus"></i>
+        Add sub-budget
+      </button>
+    </div>
+    <div id="budgetGrid" class="budget-grid"></div>
+    <div class="empty-state" id="budgetEmpty" hidden>
+      <i data-lucide="layers"></i>
+      <h3>No sub-budgets yet</h3>
+      <p>Split your monthly total into categories to track spending by area.</p>
+      <button class="btn" id="emptyAddBudget">
+        <i data-lucide="plus"></i>
+        Add sub-budget
+      </button>
+    </div>
+  </article>
+
+  <!-- Edit total budget modal -->
+  <div class="modal-root" id="totalModal" hidden>
+    <div class="modal-backdrop" data-close-total></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="totalModalTitle">
+      <h2 class="modal-title" id="totalModalTitle">Edit total monthly budget</h2>
+      <p class="modal-sub" id="totalModalSub">Set the overall cap for the month. Sub-budgets must stay inside this.</p>
+
+      <form id="totalForm" novalidate>
+        <div class="total-current" id="totalCurrentBanner" hidden>
+          <div>
+            <span class="total-current-label">Current total</span>
+            <div class="total-current-val" id="totalCurrentVal">—</div>
+          </div>
+          <div class="total-current-note" id="totalCurrentNote">—</div>
+        </div>
+
+        <div class="total-input-wrap">
+          <span class="total-input-rupee">₹</span>
+          <input id="totalAmountInput" type="number" min="1" step="1" required
+                 class="total-input" placeholder="20000" autocomplete="off" />
+        </div>
+
+        <div class="total-quick-row">
+          <span class="total-quick-label">Quick pick</span>
+          <button type="button" class="chip total-quick" data-quick="10000">₹10K</button>
+          <button type="button" class="chip total-quick" data-quick="15000">₹15K</button>
+          <button type="button" class="chip total-quick" data-quick="20000">₹20K</button>
+          <button type="button" class="chip total-quick" data-quick="30000">₹30K</button>
+          <button type="button" class="chip total-quick" data-quick="50000">₹50K</button>
+        </div>
+
+        <div class="total-impact" id="totalImpact" hidden>
+          <i data-lucide="info"></i>
+          <span id="totalImpactText">—</span>
+        </div>
+
+        <div class="error-text" data-error-for="total-amount" id="totalAmountError"></div>
+
+        <div class="modal-actions" style="justify-content:space-between">
+          <button type="button" class="btn btn-ghost btn-danger-subtle" id="totalDeleteBtn" hidden>
+            <i data-lucide="trash-2"></i>
+            Remove total
+          </button>
+          <div style="display:flex;gap:10px">
+            <button type="button" class="btn btn-ghost" data-close-total>Cancel</button>
+            <button type="submit" class="btn">Save total</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-root" id="budgetModal" hidden>
+    <div class="modal-backdrop" data-close-budget></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle">
+      <h2 class="modal-title" id="budgetModalTitle">New budget</h2>
+      <p class="modal-sub">Choose a category and a monthly target.</p>
+      <form id="budgetForm" novalidate>
+        <input type="hidden" id="budgetId" />
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="budgetCategory">Category</label>
+            <select id="budgetCategory" required></select>
+            <div class="error-text" data-error-for="category"></div>
+          </div>
+          <div class="form-field">
+            <label for="budgetAmount">Monthly limit (₹)</label>
+            <input id="budgetAmount" type="number" min="1" step="0.01" required />
+            <div class="error-text" data-error-for="amount"></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close-budget>Cancel</button>
+          <button type="submit" class="btn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/budgets.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hello">
+    <div>
+      <h2>Reports</h2>
+      <p>A clean summary of your activity, scoped by month or by dataset, ready to export.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="exportCsvBtn">
+        <i data-lucide="download"></i>
+        Export CSV
+      </button>
+    </div>
+  </section>
+
+  <article class="card">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <select id="rpMonthFilter" aria-label="Filter by month">
+          <option value="">All months</option>
+        </select>
+        <select id="rpDatasetFilter" aria-label="Filter by dataset">
+          <option value="">All sources</option>
+          <option value="__manual__">Manually added</option>
+        </select>
+      </div>
+      <div class="toolbar-right">
+        <span class="card-sub" id="rpScopeLabel">All transactions</span>
+      </div>
+    </div>
+  </article>
+
+  <section class="grid grid-three">
+    <div class="metric-tile">
+      <span class="label" id="rpSpentLabel">Spending this month</span>
+      <div class="val" id="rpSpent">—</div>
+      <div class="sub" id="rpSpentSub">—</div>
+    </div>
+    <div class="metric-tile">
+      <span class="label">Transaction count</span>
+      <div class="val" id="rpCount">—</div>
+      <div class="sub" id="rpCountSub">Across all categories</div>
+    </div>
+    <div class="metric-tile">
+      <span class="label">Average per transaction</span>
+      <div class="val" id="rpAvg">—</div>
+      <div class="sub" id="rpAvgSub">This month</div>
+    </div>
+  </section>
+
+  <section class="grid grid-split">
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Monthly trend</h3>
+          <p class="card-sub">Last 6 months of monthly totals.</p>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="rpTrendChart"></canvas></div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Category distribution</h3>
+          <p class="card-sub" id="rpCategorySub">Share of this month's spending</p>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="rpCategoryChart"></canvas></div>
+    </article>
+  </section>
+
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Month comparison</h3>
+        <p class="card-sub" id="rpMomSub">This month vs. the previous month</p>
+      </div>
+    </div>
+    <div class="chart-wrap sm"><canvas id="rpMomChart"></canvas></div>
+  </article>
+
+  <!-- NEW ANALYSIS SECTIONS -->
+  <section class="grid grid-split">
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Day-of-week spending</h3>
+          <p class="card-sub" id="rpDowSub">Which day of the week eats the most</p>
+        </div>
+      </div>
+      <div class="chart-wrap sm"><canvas id="rpDowChart"></canvas></div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Payment methods</h3>
+          <p class="card-sub" id="rpPayMethodSub">How you paid</p>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="rpPayChart"></canvas></div>
+    </article>
+  </section>
+
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Week-by-week this month</h3>
+        <p class="card-sub" id="rpWeekSub">Spending per calendar week — see which weeks ran hot</p>
+      </div>
+    </div>
+    <div class="chart-wrap sm"><canvas id="rpWeekChart"></canvas></div>
+  </article>
+
+  <section class="grid grid-split">
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Top descriptions</h3>
+          <p class="card-sub" id="rpTopDescSub">Where you spent most, grouped by description</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Top descriptions">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Category</th>
+              <th style="text-align:right">Times</th>
+              <th style="text-align:right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="rpTopDescBody"></tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Spending speed</h3>
+          <p class="card-sub" id="rpSpeedSub">How fast money moves in your scope</p>
+        </div>
+      </div>
+      <div class="speed-grid">
+        <div class="speed-tile">
+          <span class="speed-label">Avg per day</span>
+          <div class="speed-val" id="rpAvgPerDay">—</div>
+          <div class="speed-sub" id="rpAvgPerDaySub">—</div>
+        </div>
+        <div class="speed-tile">
+          <span class="speed-label">Largest single hit</span>
+          <div class="speed-val" id="rpBiggest">—</div>
+          <div class="speed-sub" id="rpBiggestSub">—</div>
+        </div>
+        <div class="speed-tile">
+          <span class="speed-label">Busiest day</span>
+          <div class="speed-val" id="rpBusiestDay">—</div>
+          <div class="speed-sub" id="rpBusiestDaySub">—</div>
+        </div>
+        <div class="speed-tile">
+          <span class="speed-label">Active days</span>
+          <div class="speed-val" id="rpActiveDays">—</div>
+          <div class="speed-sub" id="rpActiveDaysSub">—</div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <div class="empty-state" id="rpEmpty" hidden>
+    <i data-lucide="inbox"></i>
+    <h3>Nothing to report yet</h3>
+    <p>Add transactions on the Transactions page to populate your report.</p>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/reports.js') }}" defer></script>
+{% endblock %}

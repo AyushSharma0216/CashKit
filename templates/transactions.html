@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hello">
+    <div>
+      <h2>Transactions</h2>
+      <p>Search, filter, add and edit your demo expense records.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="openImportCsv">
+        <i data-lucide="upload"></i>
+        Import CSV
+      </button>
+      <button class="btn btn-ghost" id="openAddSub">
+        <i data-lucide="repeat"></i>
+        Add subscription
+      </button>
+      <button class="btn" id="openAddTx">
+        <i data-lucide="plus"></i>
+        Add transaction
+      </button>
+    </div>
+  </section>
+
+  <article class="card">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input
+          type="search"
+          class="search-input"
+          id="txSearch"
+          placeholder="Search description or notes…"
+          aria-label="Search transactions"
+        />
+        <select id="txCategoryFilter" aria-label="Filter by category">
+          <option value="">All categories</option>
+        </select>
+        <div class="filter-with-delete">
+          <select id="txMonthFilter" aria-label="Filter by month">
+            <option value="">All months</option>
+          </select>
+          <button type="button" class="btn-icon btn-icon-danger" id="deleteSelectedMonth"
+                  title="Delete every transaction in this month" hidden>
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+        <div class="filter-with-delete">
+          <select id="txDatasetFilter" aria-label="Filter by dataset">
+            <option value="">All sources</option>
+            <option value="__manual__">Manually added</option>
+          </select>
+          <button type="button" class="btn-icon btn-icon-danger" id="deleteSelectedDataset"
+                  title="Delete this dataset and every row that came in with it" hidden>
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+        <input type="date" id="txDateFilter" aria-label="Filter by exact date" />
+      </div>
+      <div class="toolbar-right">
+        <select id="txSort" aria-label="Sort transactions">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="amount-desc">Amount: high → low</option>
+          <option value="amount-asc">Amount: low → high</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table" aria-label="All transactions">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Payment</th>
+            <th>Date</th>
+            <th style="text-align:right">Amount</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="txTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" id="txEmpty" hidden>
+      <i data-lucide="inbox"></i>
+      <h3>No transactions match these filters</h3>
+      <p>Clear a filter above, or add a new expense.</p>
+      <button class="btn" id="emptyAddTx">
+        <i data-lucide="plus"></i>
+        Add transaction
+      </button>
+    </div>
+  </article>
+
+  <!-- CSV import modal -->
+  <div class="modal-root" id="csvModal" hidden>
+    <div class="modal-backdrop" data-close-csv></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="csvModalTitle">
+      <h2 class="modal-title" id="csvModalTitle">Import transactions from CSV</h2>
+      <p class="modal-sub">
+        Required columns: <code>description</code>, <code>amount</code>, <code>date</code>.
+        Optional: <code>category</code>, <code>payment</code>, <code>notes</code>.
+        Headers are case-insensitive — <code>Desc</code>, <code>Memo</code>, <code>Value</code>, <code>When</code> and friends also work.
+        Dates: <code>YYYY-MM-DD</code>, <code>DD/MM/YYYY</code> or <code>DD-MM-YYYY</code>.
+      </p>
+
+      <div class="form-field" style="margin-top:10px">
+        <label for="csvDatasetName">Dataset name (optional)</label>
+        <input id="csvDatasetName" type="text" maxlength="80"
+               placeholder="e.g. October statement, HDFC Q3, Bootcamp expenses" />
+        <div class="card-sub" style="margin-top:4px">
+          You'll find this label on the "All sources" filter above the table — pick it to view only this import, or delete it with the trash icon.
+        </div>
+      </div>
+
+      <div class="csv-drop" id="csvDrop">
+        <input id="csvFile" type="file" accept=".csv,text/csv" hidden />
+        <i data-lucide="file-up"></i>
+        <div>
+          <div style="font-weight:700" id="csvFileName">Drop a CSV here, or click to choose</div>
+          <div class="card-sub" id="csvFileMeta">UTF-8, up to a few thousand rows.</div>
+        </div>
+      </div>
+
+      <div id="csvPreview" hidden>
+        <span class="label" style="margin-top:14px">Preview — first 5 rows</span>
+        <div class="table-wrap" style="margin-top:4px">
+          <table class="data-table" id="csvPreviewTable">
+            <thead><tr id="csvPreviewHead"></tr></thead>
+            <tbody id="csvPreviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="csvErrorList" hidden style="margin-top:14px"></div>
+
+      <div class="modal-actions" style="justify-content:space-between">
+        <a href="/api/sample-csv" class="btn btn-ghost" download>
+          <i data-lucide="download"></i>
+          Download template
+        </a>
+        <div style="display:flex;gap:10px">
+          <button type="button" class="btn btn-ghost" data-close-csv>Cancel</button>
+          <button type="button" class="btn" id="csvImportBtn" disabled>Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add subscription modal -->
+  <div class="modal-root" id="subModal" hidden>
+    <div class="modal-backdrop" data-close-sub></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="subModalTitle">
+      <h2 class="modal-title" id="subModalTitle">Add recurring subscription</h2>
+      <p class="modal-sub">Creates one transaction per month from the first charge date up to today, each tagged "Recurring".</p>
+      <form id="subForm" novalidate>
+        <div class="form-grid">
+          <div class="form-field full">
+            <label for="subDescription">Service name</label>
+            <input id="subDescription" type="text" required maxlength="80"
+                   placeholder="e.g. Netflix subscription" />
+            <div class="error-text" data-error-for="sub-description"></div>
+          </div>
+          <div class="form-field">
+            <label for="subAmount">Amount per cycle (₹)</label>
+            <input id="subAmount" type="number" min="0.01" step="0.01" required />
+            <div class="error-text" data-error-for="sub-amount"></div>
+          </div>
+          <div class="form-field">
+            <label for="subCategory">Category</label>
+            <select id="subCategory" required></select>
+          </div>
+          <div class="form-field">
+            <label for="subFirstDate">First charge date</label>
+            <input id="subFirstDate" type="date" required />
+            <div class="error-text" data-error-for="sub-first-date"></div>
+          </div>
+          <div class="form-field">
+            <label for="subPayment">Payment method</label>
+            <select id="subPayment">
+              <option>UPI</option>
+              <option selected>Credit card</option>
+              <option>Debit card</option>
+              <option>Net banking</option>
+              <option>Cash</option>
+              <option>Wallet</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <label for="subNotes">Notes (optional)</label>
+            <input id="subNotes" type="text" maxlength="120" placeholder="e.g. Annual, Family plan" />
+            <div class="card-sub" style="margin-top:4px">
+              Preview: <span id="subPreview">pick a first charge date and amount to see how many months will be created.</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close-sub>Cancel</button>
+          <button type="submit" class="btn">Create subscription</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Transaction add/edit modal -->
+  <div class="modal-root" id="txModal" hidden>
+    <div class="modal-backdrop" data-close-tx></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="txModalTitle">
+      <h2 class="modal-title" id="txModalTitle">Add transaction</h2>
+      <p class="modal-sub">Saved to MongoDB. The ML classifier may suggest a category below.</p>
+      <form id="txForm" novalidate>
+        <input type="hidden" id="txId" />
+        <div class="form-grid">
+          <div class="form-field full">
+            <label for="txDescription">Description</label>
+            <input id="txDescription" name="description" type="text" required maxlength="80" />
+            <div class="error-text" data-error-for="description"></div>
+          </div>
+          <div class="form-field">
+            <label for="txAmount">Amount (₹)</label>
+            <input id="txAmount" name="amount" type="number" min="0.01" step="0.01" required />
+            <div class="error-text" data-error-for="amount"></div>
+          </div>
+          <div class="form-field">
+            <label for="txCategory">Category</label>
+            <select id="txCategory" name="category" required></select>
+            <div class="error-text" data-error-for="category"></div>
+          </div>
+          <div class="form-field">
+            <label for="txDate">Date</label>
+            <input id="txDate" name="date" type="date" required />
+            <div class="error-text" data-error-for="date"></div>
+          </div>
+          <div class="form-field">
+            <label for="txPayment">Payment method</label>
+            <select id="txPayment" name="payment">
+              <option>UPI</option>
+              <option>Debit card</option>
+              <option>Credit card</option>
+              <option>Cash</option>
+              <option>Net banking</option>
+              <option>Wallet</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <label for="txNotes">Notes (optional)</label>
+            <textarea id="txNotes" name="notes" maxlength="240"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close-tx>Cancel</button>
+          <button type="submit" class="btn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/transactions.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hello">
+    <div>
+      <h2>Your spending &amp; insights</h2>
+      <p>What you've spent, what you've set aside, and where this month stands.</p>
+    </div>
+    <div class="btn-row">
+      <a href="{{ url_for('transactions') }}" class="btn btn-ghost">
+        <i data-lucide="list"></i>
+        All transactions
+      </a>
+      <a href="{{ url_for('transactions') }}?add=1" class="btn">
+        <i data-lucide="plus"></i>
+        Add expense
+      </a>
+    </div>
+  </section>
+
+  <section class="grid grid-hero">
+    <!-- Donut hero -->
+    <div class="donut-hero">
+      <div class="chart-wrap">
+        <canvas id="categoryChart"></canvas>
+        <div class="donut-center">
+          <span class="label">Spent this month</span>
+          <span class="big" id="donutCenter">—</span>
+          <span class="small" id="donutSub">—</span>
+        </div>
+      </div>
+      <div class="legend" id="donutLegend"></div>
+    </div>
+
+    <!-- Side column: biggest expenses + latest two transactions -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">This month's highlights</h3>
+          <p class="card-sub">The biggest hits and your latest two entries</p>
+        </div>
+        <div class="chip cat-entertainment">Snapshot</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span class="label" style="margin-bottom:0">Biggest expenses this month</span>
+        <div id="biggestList" style="display:flex;flex-direction:column;gap:10px"></div>
+
+        <div class="divider"></div>
+        <span class="label" style="margin-bottom:0">Latest transactions</span>
+        <div id="latestMini" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pastel KPI row (all three are real values from MongoDB) -->
+  <section class="grid grid-kpi-3">
+    <article class="card pastel pink">
+      <span class="label">Spending this month</span>
+      <div class="kpi-row">
+        <span class="kpi" id="kpiTotal">—</span>
+        <span class="kpi-delta" id="kpiTotalDelta">—</span>
+      </div>
+      <div class="card-sub">Compared with last month</div>
+    </article>
+
+    <article class="card pastel blue">
+      <span class="label">Monthly budget</span>
+      <div class="kpi" id="kpiBudget">—</div>
+      <div class="card-sub">Sum of category targets</div>
+    </article>
+
+    <article class="card pastel yellow">
+      <span class="label">Remaining balance</span>
+      <div class="kpi" id="kpiRemaining">—</div>
+      <div class="card-sub" id="kpiRemainingSub">—</div>
+    </article>
+  </section>
+
+  <section class="grid grid-split">
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Monthly spending</h3>
+          <p class="card-sub">Last 6 months</p>
+        </div>
+        <div class="chip">Overview</div>
+      </div>
+      <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3 class="card-title">Month-over-month</h3>
+          <p class="card-sub">This month vs. previous</p>
+        </div>
+        <div class="card-icon is-blue"><i data-lucide="bar-chart-3"></i></div>
+      </div>
+      <div class="chart-wrap sm"><canvas id="momChart"></canvas></div>
+    </article>
+  </section>
+
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">Recent transactions</h3>
+        <p class="card-sub">Your five latest entries</p>
+      </div>
+      <a href="{{ url_for('transactions') }}" class="btn btn-ghost">
+        View all <i data-lucide="arrow-right"></i>
+      </a>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" aria-label="Recent transactions">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Payment</th>
+            <th>Date</th>
+            <th style="text-align:right">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="recentTxBody"></tbody>
+      </table>
+    </div>
+  </article>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/overview.js') }}" defer></script>
+{% endblock %}
